@@ -35,7 +35,7 @@ func init() {
 
 func (b *Bind9Handler) AddRecord(record rdns.DnsRecord) error {
 	for _, rec := range record.Records {
-		err := b.client.Add(record.Fqdn, rec, record.TTL)
+		err := b.client.Add(record.Fqdn, rec, "A", record.TTL)
 		if err != nil {
 			return fmt.Errorf("Bind9 API call has failed: %v", err)
 		}
@@ -43,7 +43,7 @@ func (b *Bind9Handler) AddRecord(record rdns.DnsRecord) error {
 	return nil
 }
 func (b *Bind9Handler) RemoveRecord(record rdns.DnsRecord) error {
-	err := b.client.Remove(record.Fqdn)
+	err := b.client.Remove(record.Fqdn, "A")
 	if err != nil {
 		return fmt.Errorf("Bind9 API call has failed: %v", err)
 	}
@@ -71,7 +71,12 @@ func (b *Bind9Handler) GetRecords() ([]rdns.DnsRecord, error) {
 			record.Fqdn = rr.Header().Name
 			record.Type = dns.Type(rr.Header().Rrtype).String()
 			names := make([]string, 1)
-			names[0] = rr.Header().Name
+			names[0] = record.Fqdn
+			switch rr.(type){
+			case *dns.A:
+				names[0] = rr.(*dns.A).A.String()
+				break
+			}
 			record.Records = names
 			records = append(records, record)
 		}
