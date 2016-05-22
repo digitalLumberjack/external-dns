@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/Sirupsen/logrus"
 	"github.com/rancher/external-dns/dns"
-	"github.com/rancher/external-dns/metadata"
+	"../metadata"
 )
 
 type Provider interface {
