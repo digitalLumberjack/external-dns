@@ -59,6 +59,8 @@ func (b *Bind9Handler) UpdateRecord(record rdns.DnsRecord) error {
 	}
 }
 
+
+
 func (b *Bind9Handler) GetRecords() ([]rdns.DnsRecord, error) {
 	list, err := b.client.List()
 	if (err != nil) {

@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/rancher/external-dns/dns"
 	"github.com/rancher/go-rancher/client"
+	"strings"
 )
 
 type CattleClient struct {
@@ -25,6 +26,9 @@ func NewCattleClient(cattleUrl string, cattleAccessKey string, cattleSecretKey s
 	}, nil
 }
 
+func noFQDN(fqdn string) string {
+	return strings.TrimSuffix(fqdn, ".")
+}
 func (c *CattleClient) UpdateServiceDomainName(serviceDnsRecord dns.ServiceDnsRecord) error {
 
 	event := &client.ExternalDnsEvent{
@@ -32,7 +36,7 @@ func (c *CattleClient) UpdateServiceDomainName(serviceDnsRecord dns.ServiceDnsRe
 		ExternalId:  serviceDnsRecord.Fqdn,
 		ServiceName: serviceDnsRecord.ServiceName,
 		StackName:   serviceDnsRecord.StackName,
-		Fqdn:        serviceDnsRecord.Fqdn,
+		Fqdn:        noFQDN(serviceDnsRecord.Fqdn),
 	}
 	_, err := c.rancherClient.ExternalDnsEvent.Create(event)
 	return err
