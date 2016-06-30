@@ -5,6 +5,7 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/rancher/external-dns/dns"
 	"strings"
+	"os"
 )
 
 func UpdateProviderDnsRecords(metadataRecs map[string]dns.DnsRecord) ([]dns.DnsRecord, error) {
@@ -127,13 +128,17 @@ func removeExtraRecords(metadataRecs map[string]dns.DnsRecord, providerRecs map[
 }
 
 func getProviderDnsRecords() (map[string]dns.DnsRecord, error) {
+	fqdnSeparator := os.Getenv("FQDN_SEPARATOR")
+	if len(fqdnSeparator) == 0 {
+		fqdnSeparator = "."
+	}
 	allRecords, err := provider.GetRecords()
 	if err != nil {
 		return nil, err
 	}
 	ourRecords := make(map[string]dns.DnsRecord, len(allRecords))
 	joins := []string{m.EnvironmentName, dns.RootDomainName}
-	suffix := "." + strings.ToLower(strings.Join(joins, "."))
+	suffix := fqdnSeparator + strings.ToLower(strings.Join(joins, "."))
 	for _, value := range allRecords {
 		if value.Type == "A" && strings.HasSuffix(value.Fqdn, suffix) && value.TTL == dns.TTL {
 			ourRecords[value.Fqdn] = value
