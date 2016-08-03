@@ -69,9 +69,38 @@ func (m *MetadataClient) getContainersDnsRecords(dnsEntries map[string]utils.Dns
 	if err != nil {
 		return err
 	}
+	traefikips := []string{}
+        for _, container := range containers {
+		if len(container.ServiceName) == 0 || len(container.Ports) == 0 || !containerStateOK(container) {
+                        continue
+                }
+		if container.Labels["traefik.loadbalancer"] == "true" {
+			hostUUID := container.HostUUID
+	                if len(hostUUID) == 0 {
+	                        logrus.Debugf("Container's %v host_uuid is empty", container.Name)
+	                        continue
+	                }
+	                host, err := m.MetadataClient.GetHost(hostUUID)
+	                if err != nil {
+	                        logrus.Infof("%v", err)
+	                        continue
+	                }
+
+	                ip, ok := host.Labels["io.rancher.host.external_dns_ip"]
+
+	                if !ok || ip == "" {
+	                        ip = host.AgentIP
+	                }
+
+			traefikips = append(traefikips, ip)
+		}
+	}
+        logrus.Debugf("traefik ips %s", traefikips)
 
 	for _, container := range containers {
-		if len(container.ServiceName) == 0 || len(container.Ports) == 0 || !containerStateOK(container) {
+		logrus.Debugf("traefik port %s", container.Labels["traefik.port"])
+
+		if len(container.ServiceName) == 0 || (len(container.Ports) == 0 && container.Labels["traefik.port"] == "") || !containerStateOK(container) {
 			continue
 		}
 
@@ -89,22 +118,25 @@ func (m *MetadataClient) getContainersDnsRecords(dnsEntries map[string]utils.Dns
 			logrus.Debugf("Container's %v host_uuid is empty", container.Name)
 			continue
 		}
-		host, err := m.MetadataClient.GetHost(hostUUID)
-		if err != nil {
-			logrus.Infof("%v", err)
-			continue
+		records := []string{}
+		if len(container.Labels["traefik.port"]) != 0 && len(traefikips) > 0{
+			records = traefikips
+		}else {
+			host, err := m.MetadataClient.GetHost(hostUUID)
+			if err != nil {
+				logrus.Infof("%v", err)
+				continue
+			}
+
+			ip, ok := host.Labels["io.rancher.host.external_dns_ip"]
+
+			if !ok || ip == "" {
+				ip = host.AgentIP
+			}
+			records = []string{ip}
 		}
-
-		ip, ok := host.Labels["io.rancher.host.external_dns_ip"]
-
-		if !ok || ip == "" {
-			ip = host.AgentIP
-		}
-
 		fqdn := utils.ConvertToFqdn(container.ServiceName, container.StackName, m.EnvironmentName, config.RootDomainName)
-		records := []string{ip}
 		dnsEntry := utils.DnsRecord{fqdn, records, "A", config.TTL}
-
 		addToDnsEntries(dnsEntry, dnsEntries)
 	}
 
