@@ -2,6 +2,7 @@ package utils
 
 import (
 	"strings"
+	"os"
 )
 
 type DnsRecord struct {
@@ -18,14 +19,25 @@ type ServiceDnsRecord struct {
 }
 
 func ConvertToServiceDnsRecord(dnsRecord DnsRecord) ServiceDnsRecord {
+	fqdnSeparator := os.Getenv("FQDN_SEPARATOR")
+	if len(fqdnSeparator) == 0 {
+		fqdnSeparator = "."
+	}
 	splitted := strings.Split(dnsRecord.Fqdn, ".")
+	if fqdnSeparator != "." {
+		splitted = strings.Split(splitted[0], fqdnSeparator)
+	}
 	serviceRecord := ServiceDnsRecord{dnsRecord.Fqdn, splitted[0], splitted[1]}
 	return serviceRecord
 }
 
 func ConvertToFqdn(serviceName, stackName, environmentName, rootDomainName string) string {
-	labels := []string{serviceName, stackName, environmentName, rootDomainName}
-	return strings.ToLower(strings.Join(labels, "."))
+        fqdnSeparator := os.Getenv("FQDN_SEPARATOR")
+        if len(fqdnSeparator) == 0 {
+                fqdnSeparator = "."
+        }
+	labels := []string{serviceName, stackName, environmentName}
+	return strings.ToLower(strings.Join(labels, fqdnSeparator)) + "." + rootDomainName
 }
 
 // Fqdn ensures that the name is a fqdn adding a trailing dot if necessary.

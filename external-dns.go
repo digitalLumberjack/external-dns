@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"github.com/Sirupsen/logrus"
 	"github.com/rancher/external-dns/config"
 	"github.com/rancher/external-dns/utils"
@@ -128,14 +129,20 @@ func removeExtraRecords(metadataRecs map[string]utils.DnsRecord, providerRecs ma
 }
 
 func getProviderDnsRecords() (map[string]utils.DnsRecord, error) {
+	fqdnSeparator := os.Getenv("FQDN_SEPARATOR")
+        if len(fqdnSeparator) == 0 {
+                fqdnSeparator = "."
+        }
+
 	allRecords, err := provider.GetRecords()
 	if err != nil {
 		return nil, err
 	}
 	ourRecords := make(map[string]utils.DnsRecord, len(allRecords))
 	joins := []string{m.EnvironmentName, config.RootDomainName}
-	suffix := "." + strings.ToLower(strings.Join(joins, "."))
+	suffix := fqdnSeparator + strings.ToLower(strings.Join(joins, "."))
 	for _, value := range allRecords {
+		logrus.Debugf("Checking record: %s with suffix %s", value.Fqdn, suffix)
 		if value.Type == "A" && strings.HasSuffix(value.Fqdn, suffix) && value.TTL == config.TTL {
 			ourRecords[value.Fqdn] = value
 		}
